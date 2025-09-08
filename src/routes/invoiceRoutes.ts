@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { createOnChainInvoice, payOnChainInvoice } from "../services/suiService";
 import Invoice from "../models/Invoice";
+import { Transaction } from "../models/Transaction";
 import { sendInvoiceEmail, sendPaymentConfirmationEmail } from "../utils/email";
 
 const router = Router();
@@ -70,6 +71,42 @@ router.post('/:id/mark-paid', async (req, res) => {
     } catch (emailError) {
       console.error('Failed to send payment confirmation email:', emailError);
       // Don't fail the request if email fails
+    }
+
+    // Create transaction record
+    try {
+      const totalAmount = invoice.amount + Math.floor((invoice.amount * invoice.surchargeBps) / 10000);
+      
+      const transaction = new Transaction({
+        id: txDigest,
+        amount: totalAmount, // Total amount in MIST
+        date: new Date(),
+        status: "Success",
+        payeeId: invoice.payeeId,
+        payerId: invoice.payer,
+        invoiceId: invoice._id,
+        memo: `Payment for ${invoice.service}`,
+      });
+
+      await transaction.save();
+      console.log('Transaction record created:', txDigest);
+    } catch (txError) {
+      console.error('Failed to create transaction record:', txError);
+      // Don't fail the request if transaction record fails
+    }
+
+    // Emit WebSocket event for real-time updates
+    try {
+      if (global.io) {
+        global.io.to(`wallet:${invoice.payeeId}`).emit('invoice-paid', {
+          invoice: invoice,
+          txDigest: txDigest
+        });
+        console.log('WebSocket event emitted for invoice payment:', invoice._id);
+      }
+    } catch (wsError) {
+      console.error('Failed to emit WebSocket event:', wsError);
+      // Don't fail the request if WebSocket fails
     }
 
     res.json({ success: true, invoice });
@@ -190,6 +227,19 @@ router.post("/create", async (req, res) => {
     } catch (emailError) {
       console.error("Failed to send invoice email:", emailError);
       // Don't fail the whole request if email fails
+    }
+
+    // Emit WebSocket event for real-time updates
+    try {
+      if (global.io) {
+        global.io.to(`wallet:${payeeId}`).emit('invoice-created', {
+          invoice: invoice
+        });
+        console.log('WebSocket event emitted for invoice creation:', invoice._id);
+      }
+    } catch (wsError) {
+      console.error('Failed to emit WebSocket event:', wsError);
+      // Don't fail the request if WebSocket fails
     }
 
     res.json({ success: true, invoice });

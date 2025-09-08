@@ -73,6 +73,15 @@ router.post('/:id/mark-paid', async (req, res) => {
     }
 
     res.json({ success: true, invoice });
+    
+    // Emit real-time update to the payee's room
+    if (global.io && invoice.payeeId) {
+      global.io.to(`wallet:${invoice.payeeId}`).emit('invoice-paid', {
+        invoiceId: invoice._id,
+        invoice: invoice,
+        message: 'Invoice payment confirmed'
+      });
+    }
   } catch (error) {
     console.error('Error marking invoice as paid:', error);
     res.status(500).json({ error: 'Failed to update invoice status' });
@@ -145,6 +154,14 @@ router.post("/create", async (req, res) => {
     }
 
     res.json({ success: true, invoice });
+    
+    // Emit real-time update to the payee's room
+    if (global.io && invoice.payeeId) {
+      global.io.to(`wallet:${invoice.payeeId}`).emit('invoice-created', {
+        invoice: invoice,
+        message: 'New invoice created'
+      });
+    }
   } catch (err: any) {
     console.error(err);
     res.status(500).json({ error: err.message });

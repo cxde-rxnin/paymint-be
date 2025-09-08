@@ -31,15 +31,15 @@ router.get('/', async (req, res) => {
                             new Date();
       
       return {
-        id: invoice._id?.toString() || '',
+        id: invoice.txDigest || invoice._id?.toString() || '', // Use txDigest as transaction ID
         invoiceNumber: invoice.clientId || invoice._id?.toString() || '',
         service: invoice.service,
         description: invoice.description,
-        amount: totalAmount / 1_000_000_000, // Convert MIST to SUI
-        baseAmount: invoice.amount / 1_000_000_000,
-        surchargeAmount: Math.floor((invoice.amount * invoice.surchargeBps) / 10000) / 1_000_000_000,
+        amount: totalAmount, // Keep in MIST for frontend conversion
+        baseAmount: invoice.amount, // Keep in MIST
+        surchargeAmount: Math.floor((invoice.amount * invoice.surchargeBps) / 10000), // Keep in MIST
         date: transactionDate,
-        status: "completed",
+        status: "Success", // Match expected status format
         txDigest: invoice.txDigest,
         payer: invoice.payer,
         payeeId: invoice.payeeId
