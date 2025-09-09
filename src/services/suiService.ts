@@ -152,3 +152,136 @@ export const payOnChainInvoice = async (data: any) => {
 
   return result.digest;
 };
+
+/**
+ * Create a new on-chain payroll
+ */
+export const createOnChainPayroll = async (data: any) => {
+  const { issuer, clientEmail, recipients, totalAmount, surchargeBps, metadataHash, dueDate, createdAt } = data;
+
+  console.log("Creating payroll with data:", { issuer, clientEmail, recipients, totalAmount, surchargeBps, metadataHash, dueDate, createdAt });
+
+  const tx = new TransactionBlock();
+
+  // Convert metadata hash to proper format
+  const metadataBytes = Array.from(Buffer.from(metadataHash, "hex"));
+  
+  // Convert client email to bytes
+  const clientEmailBytes = Array.from(Buffer.from(clientEmail, "utf8"));
+  
+  // Extract recipient addresses and amounts
+  const recipientAddresses = recipients.map((r: any) => r.wallet);
+  const recipientAmounts = recipients.map((r: any) => r.amount);
+
+  console.log("Payroll arguments being passed:", {
+    clientEmailBytes: clientEmailBytes,
+    recipientAddresses: recipientAddresses,
+    recipientAmounts: recipientAmounts,
+    totalAmount: totalAmount,
+    surchargeBps: surchargeBps,
+    metadataBytes: metadataBytes,
+    dueDate: dueDate,
+    createdAt: createdAt
+  });
+
+  // Match the Move contract signature: create_payroll(client_email, recipients, amounts, surcharge_bps, metadata_hash, due_date_unix, created_at_unix, ctx)
+  const moveCallResult = tx.moveCall({
+    target: `${PACKAGE_ID}::invoice::create_payroll`,
+    arguments: [
+      tx.pure(clientEmailBytes, "vector<u8>"),        // 1. client_email
+      tx.pure(recipientAddresses, "vector<address>"), // 2. recipients
+      tx.pure(recipientAmounts, "vector<u64>"),       // 3. amounts
+      tx.pure(surchargeBps, "u64"),                   // 4. surcharge_bps  
+      tx.pure(metadataBytes, "vector<u8>"),           // 5. metadata_hash
+      tx.pure(dueDate, "u64"),                        // 6. due_date_unix
+      tx.pure(createdAt, "u64"),                      // 7. created_at_unix
+    ],
+  });
+
+  console.log("Executing payroll creation transaction...");
+
+  const result = await client.signAndExecuteTransactionBlock({
+    transactionBlock: tx,
+    signer: keypair,
+    options: { showEffects: true, showObjectChanges: true },
+  });
+
+  console.log("Payroll creation result:", result);
+
+  // Extract object ID from created objects
+  const createdObjects = result.objectChanges?.filter((change) => change.type === "created") || [];
+  const payrollObject = createdObjects.find((obj: any) => obj.objectType?.includes("Payroll"));
+
+  if (!payrollObject || !("objectId" in payrollObject)) {
+    throw new Error("Failed to create payroll object on-chain");
+  }
+
+  return {
+    txDigest: result.digest,
+    objectId: payrollObject.objectId,
+  };
+};
+
+/**
+ * Pay an on-chain payroll
+ */
+export const payOnChainPayroll = async (data: any) => {
+  const { payrollId, payer, recipients, totalAmount, surchargeBps } = data;
+
+  console.log("Paying payroll:", { payrollId, payer, recipients, totalAmount, surchargeBps });
+
+  const surcharge = Math.floor((totalAmount * surchargeBps) / 10000);
+  const totalDue = totalAmount + surcharge;
+
+  const coins = await client.getCoins({
+    owner: payer,
+    coinType: "0x2::sui::SUI",
+  });
+
+  if (!coins.data.length) {
+    throw new Error("No SUI coins found in payer account.");
+  }
+
+  let selected: string[] = [];
+  let accumulated = 0n;
+
+  for (const coin of coins.data) {
+    selected.push(coin.coinObjectId);
+    accumulated += BigInt(coin.balance);
+    if (accumulated >= BigInt(totalDue)) break;
+  }
+
+  if (accumulated < BigInt(totalDue)) {
+    throw new Error("Insufficient balance to cover payroll.");
+  }
+
+  const tx = new TransactionBlock();
+
+  let paymentCoin;
+  if (selected.length > 1) {
+    paymentCoin = tx.mergeCoins(
+      tx.object(selected[0]),
+      selected.slice(1).map((id) => tx.object(id))
+    );
+  } else {
+    paymentCoin = tx.object(selected[0]);
+  }
+
+  tx.moveCall({
+    target: `${PACKAGE_ID}::invoice::pay_payroll`,
+    typeArguments: ["0x2::sui::SUI"],
+    arguments: [
+      tx.object(payrollId),
+      paymentCoin,
+      tx.pure.address(process.env.PLATFORM_RECIPIENT!),
+    ],
+  });
+
+  const result = await client.signAndExecuteTransactionBlock({
+    transactionBlock: tx,
+    signer: keypair,
+    options: { showEffects: true },
+  });
+
+  return result.digest;
+};

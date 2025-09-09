@@ -516,3 +516,537 @@ export const sendPaymentConfirmationEmail = async (
     html,
   });
 };
+
+// Payroll email functionality
+interface PayrollRecipient {
+  wallet: string;
+  amount: number; // in SUI
+}
+
+interface PayrollEmailData {
+  projectName: string;
+  description?: string;
+  recipients: PayrollRecipient[];
+  totalAmount: number; // in SUI
+  surchargeAmount: number; // in SUI
+  finalTotalAmount: number; // in SUI
+  dueDate: string;
+  paymentUrl: string;
+  teamLeadName?: string;
+}
+
+export const createPayrollEmailTemplate = (data: PayrollEmailData): string => {
+  const {
+    projectName,
+    description,
+    recipients,
+    totalAmount,
+    surchargeAmount,
+    finalTotalAmount,
+    dueDate,
+    paymentUrl,
+    teamLeadName = "Paymint User"
+  } = data;
+
+  const recipientRows = recipients.map((recipient, index) => `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 8px 0; border-bottom: 1px solid #f3f4f6;">
+      <div style="flex: 1;">
+        <div style="font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace; font-size: 13px; color: #6b7280;">${recipient.wallet}</div>
+      </div>
+      <div style="font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace; font-weight: 600; color: #1f2937;">${recipient.amount.toFixed(4)} SUI</div>
+    </div>
+  `).join('');
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payroll - ${projectName}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+        }
+        .email-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .header p {
+            margin: 8px 0 0 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .payroll-details {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 24px;
+            margin: 24px 0;
+            border-left: 4px solid #10b981;
+        }
+        .payroll-number {
+            font-size: 18px;
+            font-weight: 600;
+            color: #10b981;
+            margin-bottom: 16px;
+        }
+        .service-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        .service-description {
+            color: #6b7280;
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+        .team-section {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 16px;
+            margin-bottom: 16px;
+        }
+        .team-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+        .amount-breakdown {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 16px;
+        }
+        .amount-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        .amount-row.total {
+            font-weight: 600;
+            font-size: 18px;
+            color: #1f2937;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 12px;
+            margin-top: 12px;
+        }
+        .amount-value {
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+        }
+        .pay-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 24px 0;
+            text-align: center;
+            box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.3);
+            transition: all 0.3s ease;
+        }
+        .pay-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.4);
+        }
+        .due-date {
+            color: #dc2626;
+            font-weight: 500;
+            margin-top: 16px;
+        }
+        .footer {
+            background: #f9fafb;
+            padding: 24px 30px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .footer p {
+            margin: 4px 0;
+        }
+        .warning {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #dc2626;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .content {
+                padding: 24px 20px;
+            }
+            .header {
+                padding: 24px 20px;
+            }
+            .payroll-details {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>💰 Team Payroll</h1>
+            <p>You have received a payroll payment request</p>
+        </div>
+        
+        <div class="content">
+            <h2>Hello!</h2>
+            <p>You have received a payroll from <strong>${teamLeadName}</strong>. The payment will be automatically distributed to all team members upon your confirmation.</p>
+            
+            <div class="payroll-details">
+                <div class="payroll-number">Project: ${projectName}</div>
+                
+                <div class="service-title">Team Payment Distribution</div>
+                ${description ? `<div class="service-description">${description}</div>` : ''}
+                
+                <div class="team-section">
+                    <div class="team-title">Team Members (${recipients.length})</div>
+                    ${recipientRows}
+                </div>
+                
+                <div class="amount-breakdown">
+                    <div class="amount-row">
+                        <span>Team Payment Total:</span>
+                        <span class="amount-value">${totalAmount.toFixed(4)} SUI</span>
+                    </div>
+                    <div class="amount-row">
+                        <span>Platform Fee (2.5%):</span>
+                        <span class="amount-value">+${surchargeAmount.toFixed(4)} SUI</span>
+                    </div>
+                    <div class="amount-row total">
+                        <span>Total Amount:</span>
+                        <span class="amount-value">${finalTotalAmount.toFixed(4)} SUI</span>
+                    </div>
+                </div>
+                
+                <div class="due-date">
+                    📅 Due Date: ${dueDate}
+                </div>
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="${paymentUrl}" class="pay-button">
+                    💳 Pay Payroll
+                </a>
+            </div>
+            
+            <div class="warning">
+                <strong>⚡ Smart Contract Distribution:</strong> Your payment will be automatically split and sent directly to each team member's wallet on the Sui blockchain. This ensures transparent, instant, and secure distribution.
+            </div>
+            
+            <p><strong>Payment Instructions:</strong></p>
+            <ul>
+                <li>Click the "Pay Payroll" button above</li>
+                <li>Connect your SUI wallet</li>
+                <li>Confirm the payment transaction</li>
+                <li>Funds will be automatically distributed to all team members</li>
+                <li>You'll receive a confirmation once payment is complete</li>
+            </ul>
+            
+            <p>If you have any questions about this payroll, please contact the team lead directly.</p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Paymint</strong> - Blockchain Payroll Platform</p>
+            <p>This email was sent automatically. Please do not reply to this email.</p>
+            <p>Powered by SUI blockchain technology</p>
+        </div>
+    </div>
+</body>
+</html>
+  `.trim();
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payroll - ${projectName}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .logo {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #6b7280;
+            font-size: 16px;
+        }
+        .payroll-info {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+        .payroll-info h3 {
+            margin: 0 0 20px 0;
+            color: #1e40af;
+            font-size: 18px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #374151;
+        }
+        .detail-value {
+            color: #111827;
+            font-weight: 500;
+        }
+        .recipients-section {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+        .recipients-section h3 {
+            margin: 0 0 20px 0;
+            color: #d97706;
+            font-size: 18px;
+        }
+        .recipient-row {
+            display: flex;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #fbbf24;
+        }
+        .recipient-row:last-child {
+            border-bottom: none;
+        }
+        .recipient-index {
+            background: #d97706;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        .recipient-details {
+            flex: 1;
+        }
+        .recipient-wallet {
+            font-family: monospace;
+            font-size: 14px;
+            color: #374151;
+            word-break: break-all;
+        }
+        .recipient-amount {
+            font-weight: bold;
+            color: #d97706;
+            margin-top: 5px;
+        }
+        .total-section {
+            background: #dcfce7;
+            border: 2px solid #16a34a;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        .total-amount {
+            font-size: 28px;
+            font-weight: bold;
+            color: #15803d;
+            margin: 10px 0;
+        }
+        .pay-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 20px 0;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .pay-button:hover {
+            transform: translateY(-2px);
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .warning {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">💰 Paymint</div>
+            <div class="subtitle">Team Payroll Payment Request</div>
+        </div>
+        
+        <h2>Hello! You have received a payroll for team payment.</h2>
+        
+        <p><strong>${teamLeadName}</strong> has requested payment for a team project. The payment will be automatically distributed to all team members upon your confirmation.</p>
+        
+        <div class="payroll-info">
+            <h3>📋 Project Details</h3>
+            <div class="detail-row">
+                <span class="detail-label">Project Name:</span>
+                <span class="detail-value">${projectName}</span>
+            </div>
+            ${description ? `
+            <div class="detail-row">
+                <span class="detail-label">Description:</span>
+                <span class="detail-value">${description}</span>
+            </div>
+            ` : ''}
+            <div class="detail-row">
+                <span class="detail-label">Due Date:</span>
+                <span class="detail-value">${dueDate}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Team Lead:</span>
+                <span class="detail-value">${teamLeadName}</span>
+            </div>
+        </div>
+        
+        <div class="recipients-section">
+            <h3>👥 Team Members (${recipients.length} recipients)</h3>
+            ${recipientRows}
+        </div>
+        
+        <div class="payroll-info">
+            <h3>💰 Payment Summary</h3>
+            <div class="detail-row">
+                <span class="detail-label">Total Team Payment:</span>
+                <span class="detail-value">${totalAmount.toFixed(4)} SUI</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Processing Fee:</span>
+                <span class="detail-value">${surchargeAmount.toFixed(4)} SUI</span>
+            </div>
+            <div class="detail-row" style="font-weight: bold; font-size: 18px; color: #15803d;">
+                <span class="detail-label">Total Amount Due:</span>
+                <span class="detail-value">${finalTotalAmount.toFixed(4)} SUI</span>
+            </div>
+        </div>
+        
+        <div class="total-section">
+            <div>Amount to Pay</div>
+            <div class="total-amount">${finalTotalAmount.toFixed(4)} SUI</div>
+            <a href="${paymentUrl}" class="pay-button">💳 Pay Payroll Now</a>
+        </div>
+        
+        <div class="warning">
+            <strong>⚡ Smart Contract Distribution:</strong> Your payment will be automatically split and sent directly to each team member's wallet on the Sui blockchain. This ensures transparent, instant, and secure distribution.
+        </div>
+        
+        <p>By paying this payroll, you authorize the automatic distribution of funds to all listed team members. The blockchain will handle the splitting and ensure each member receives their designated amount.</p>
+        
+        <p>If you have any questions about this payroll or need assistance, please contact the team lead or our support team.</p>
+        
+        <p style="margin-top: 30px;">
+            Best regards,<br>
+            <strong>The Paymint Team</strong>
+        </p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated payroll notification. Please verify all details before payment.</p>
+        <p>© 2025 Paymint. All rights reserved.</p>
+    </div>
+</body>
+</html>
+  `.trim();
+};
+
+export const sendPayrollEmail = async (
+  to: string,
+  data: PayrollEmailData
+) => {
+  const subject = `Team Payroll Payment Request - ${data.projectName}`;
+  const html = createPayrollEmailTemplate(data);
+
+  await transporter.sendMail({
+    from: '"Paymint" <noreply@paymint.com>',
+    to,
+    subject,
+    html,
+  });
+};
