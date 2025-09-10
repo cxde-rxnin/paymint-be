@@ -1050,3 +1050,257 @@ export const sendPayrollEmail = async (
     html,
   });
 };
+
+// Payroll payment confirmation functionality
+interface PayrollPaymentConfirmationData {
+  projectName: string;
+  description?: string;
+  recipients: PayrollRecipient[];
+  totalAmount: number; // in SUI (team payment total)
+  surchargeAmount: number; // in SUI
+  paidAmount: number; // in SUI (total paid including surcharge)
+  txDigest: string;
+  teamLeadName?: string;
+  paidDate: string;
+}
+
+export const createPayrollPaymentConfirmationTemplate = (data: PayrollPaymentConfirmationData): string => {
+  const {
+    projectName,
+    description,
+    recipients,
+    totalAmount,
+    surchargeAmount,
+    paidAmount,
+    txDigest,
+    teamLeadName = "Paymint User",
+    paidDate
+  } = data;
+
+  const recipientRows = recipients.map((recipient, index) => `
+    <div class="detail-row">
+      <span class="detail-label">${recipient.wallet.slice(0, 8)}...${recipient.wallet.slice(-6)}:</span>
+      <span class="detail-value">${recipient.amount.toFixed(4)} SUI</span>
+    </div>
+  `).join('');
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Confirmation - Payroll ${projectName}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .header p {
+            margin: 8px 0 0 0;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px;
+        }
+        .success-badge {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        .invoice-details {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            font-weight: 600;
+            font-size: 18px;
+            color: #059669;
+        }
+        .detail-label {
+            color: #6b7280;
+        }
+        .detail-value {
+            font-weight: 500;
+            color: #111827;
+        }
+        .transaction-info {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+        .transaction-info h3 {
+            margin: 0 0 15px 0;
+            color: #1e40af;
+            font-size: 16px;
+        }
+        .tx-hash {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            background: #dbeafe;
+            padding: 8px 12px;
+            border-radius: 6px;
+            word-break: break-all;
+            color: #1e40af;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f9fafb;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .cta-button {
+            display: inline-block;
+            background: #059669;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin: 20px 0;
+        }
+        .recipients-section {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .recipients-section h3 {
+            margin: 0 0 15px 0;
+            color: #111827;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Payment Received</h1>
+            <p>Thank you for your payment!</p>
+        </div>
+        
+        <div class="content">
+            <div class="success-badge">
+                🎉 Your payroll payment has been successfully processed and distributed to all team members
+            </div>
+            
+            <p>Dear Valued Client,</p>
+            
+            <p>We're pleased to confirm that your payroll payment for <strong>${projectName}</strong> has been successfully received and automatically distributed to all team members.</p>
+            
+            <div class="invoice-details">
+                <h3 style="margin: 0 0 15px 0; color: #111827;">Payment Details</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Project:</span>
+                    <span class="detail-value">${projectName}</span>
+                </div>
+                ${description ? `
+                <div class="detail-row">
+                    <span class="detail-label">Description:</span>
+                    <span class="detail-value">${description}</span>
+                </div>
+                ` : ''}
+                <div class="detail-row">
+                    <span class="detail-label">Team Payment Total:</span>
+                    <span class="detail-value">${totalAmount.toFixed(4)} SUI</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Processing Fee:</span>
+                    <span class="detail-value">${surchargeAmount.toFixed(4)} SUI</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Total Paid:</span>
+                    <span class="detail-value">${paidAmount.toFixed(4)} SUI</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Payment Date:</span>
+                    <span class="detail-value">${paidDate}</span>
+                </div>
+            </div>
+            
+            <div class="recipients-section">
+                <h3>👥 Team Member Distributions</h3>
+                <p style="margin: 0 0 15px 0; color: #6b7280; font-size: 14px;">The following amounts have been automatically sent to each team member:</p>
+                ${recipientRows}
+            </div>
+            
+            <div class="transaction-info">
+                <h3>🔗 Blockchain Transaction Details</h3>
+                <p style="margin: 0 0 10px 0; color: #374151;">Your payment has been permanently recorded on the Sui blockchain.</p>
+                <p style="margin: 0 0 5px 0; font-weight: 600; color: #1e40af;">Transaction Hash:</p>
+                <div class="tx-hash">${txDigest}</div>
+            </div>
+            
+            <p>Your payroll payment has been securely processed on the Sui blockchain, ensuring transparency and immutability. All team members have been automatically paid their respective amounts.</p>
+            
+            <p>If you have any questions about this payment or need assistance, please don't hesitate to contact our support team.</p>
+            
+            <p>Thank you for choosing Paymint for your payroll needs!</p>
+            
+            <p style="margin-top: 30px;">
+                Best regards,<br>
+                <strong>The Paymint Team</strong>
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated confirmation email. Please do not reply to this message.</p>
+            <p>© 2025 Paymint. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+  `.trim();
+};
+
+export const sendPayrollPaymentConfirmationEmail = async (
+  to: string,
+  data: PayrollPaymentConfirmationData
+) => {
+  const subject = `Payment Confirmed - Payroll ${data.projectName}`;
+  const html = createPayrollPaymentConfirmationTemplate(data);
+
+  await transporter.sendMail({
+    from: '"Paymint" <noreply@paymint.com>',
+    to,
+    subject,
+    html,
+  });
+};

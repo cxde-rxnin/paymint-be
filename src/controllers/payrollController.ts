@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import Payroll from "../models/Payroll";
 import { createOnChainPayroll, payOnChainPayroll } from "../services/suiService";
-import { sendPayrollEmail } from "../utils/email";
+import { sendPayrollEmail, sendPayrollPaymentConfirmationEmail } from "../utils/email";
 
 // Create payroll with multiple recipients
 export const createPayroll = async (req: Request, res: Response) => {
@@ -189,6 +189,39 @@ export const markPayrollPaid = async (req: Request, res: Response) => {
     await payroll.save();
 
     console.log('Payroll marked as paid:', payroll._id, 'Transaction:', txDigest);
+
+    // Send payment confirmation email to client
+    try {
+      const totalAmountInSui = payroll.totalAmount / 1_000_000_000;
+      const surchargeAmountInSui = (totalAmountInSui * payroll.surchargeBps) / 10000;
+      const totalPaidAmountInSui = totalAmountInSui + surchargeAmountInSui;
+
+      await sendPayrollPaymentConfirmationEmail(payroll.clientEmail, {
+        projectName: payroll.projectName,
+        description: payroll.description,
+        recipients: payroll.recipients.map((r: any) => ({
+          wallet: r.wallet,
+          amount: r.amount / 1_000_000_000, // Convert to SUI for display
+        })),
+        totalAmount: totalAmountInSui,
+        surchargeAmount: surchargeAmountInSui,
+        paidAmount: totalPaidAmountInSui,
+        txDigest: txDigest,
+        teamLeadName: "Paymint User", // You might want to get this from user profile
+        paidDate: new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      });
+
+      console.log('Payroll payment confirmation email sent to:', payroll.clientEmail);
+    } catch (emailError) {
+      console.error('Failed to send payroll payment confirmation email:', emailError);
+      // Don't fail the request if email fails
+    }
 
     res.json({ success: true, payroll });
     
