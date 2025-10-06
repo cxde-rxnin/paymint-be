@@ -57,7 +57,7 @@ export const createPayroll = async (req: Request, res: Response) => {
 
     // Send email notification to the client
     try {
-      const baseTotalAmount = totalAmount / 1_000_000_000; // Convert MIST to SUI for display
+      const baseTotalAmount = totalAmount / 1_000_000_000;
       const surchargeAmount = (baseTotalAmount * surchargeBps) / 10000;
       const finalTotalAmount = baseTotalAmount + surchargeAmount;
       
@@ -69,20 +69,19 @@ export const createPayroll = async (req: Request, res: Response) => {
         description,
         recipients: recipients.map((r: any) => ({
           wallet: r.wallet,
-          amount: r.amount / 1_000_000_000, // Convert to SUI for display
+          amount: r.amount / 1_000_000_000,
         })),
         totalAmount: baseTotalAmount,
         surchargeAmount,
         finalTotalAmount,
         dueDate: new Date(parseInt(dueDate) * 1000).toLocaleDateString(),
         paymentUrl,
-        teamLeadName: "Paymint User", // You might want to get this from user profile
+        teamLeadName: "Paymint User",
       });
       
       console.log(`Payroll email sent to ${clientEmail}`);
     } catch (emailError) {
       console.error("Error sending payroll email:", emailError);
-      // Don't fail the entire request if email fails
     }
 
     res.json(payroll);
@@ -201,13 +200,13 @@ export const markPayrollPaid = async (req: Request, res: Response) => {
         description: payroll.description,
         recipients: payroll.recipients.map((r: any) => ({
           wallet: r.wallet,
-          amount: r.amount / 1_000_000_000, // Convert to SUI for display
+          amount: r.amount / 1_000_000_000,
         })),
         totalAmount: totalAmountInSui,
         surchargeAmount: surchargeAmountInSui,
         paidAmount: totalPaidAmountInSui,
         txDigest: txDigest,
-        teamLeadName: "Paymint User", // You might want to get this from user profile
+        teamLeadName: "Paymint User",
         paidDate: new Date().toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long',

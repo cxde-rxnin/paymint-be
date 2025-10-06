@@ -42,7 +42,6 @@ export const createInvoice = async (req: Request, res: Response) => {
       const surchargeAmount = (baseAmount * surchargeBps) / 10000;
       const totalAmount = baseAmount + surchargeAmount;
       
-      // Create payment URL (you might want to customize this based on your frontend URL)
       const paymentUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pay/${invoice._id}`;
       
       await sendInvoiceEmail(payer, {
@@ -54,13 +53,12 @@ export const createInvoice = async (req: Request, res: Response) => {
         totalAmount,
         dueDate: new Date(parseInt(dueDate) * 1000).toLocaleDateString(),
         paymentUrl,
-        payeeName: "Paymint User" // You might want to get this from user profile
+        payeeName: "Paymint User"
       });
       
       console.log(`Invoice email sent to ${payer}`);
     } catch (emailError) {
       console.error("Error sending invoice email:", emailError);
-      // Don't fail the entire request if email fails
     }
 
     res.json(invoice);

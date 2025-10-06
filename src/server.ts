@@ -20,7 +20,6 @@ const io = new Server(server, {
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
   
-  // Join room based on wallet address for user-specific updates
   socket.on('join-wallet', (walletAddress: string) => {
     socket.join(`wallet:${walletAddress}`);
     console.log(`Socket ${socket.id} joined wallet room: ${walletAddress}`);

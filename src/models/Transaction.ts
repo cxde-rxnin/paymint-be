@@ -8,9 +8,9 @@ const TransactionSchema = new mongoose.Schema({
   payeeId: { type: String, required: true }, // Wallet address of the payee
   payerId: { type: String, required: true }, // Wallet address of the payer
   invoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' }, // Reference to the invoice
-  memo: { type: String }, // Optional memo/description
-  blockHeight: { type: Number }, // Block height when transaction was confirmed
-  gasUsed: { type: Number }, // Gas used for the transaction
+  memo: { type: String },
+  blockHeight: { type: Number },
+  gasUsed: { type: Number },
 }, {
   timestamps: true // Adds createdAt and updatedAt
 });

@@ -92,7 +92,6 @@ router.post('/:id/mark-paid', async (req, res) => {
       console.log('Transaction record created:', txDigest);
     } catch (txError) {
       console.error('Failed to create transaction record:', txError);
-      // Don't fail the request if transaction record fails
     }
 
     // Emit WebSocket event for real-time updates
@@ -106,7 +105,6 @@ router.post('/:id/mark-paid', async (req, res) => {
       }
     } catch (wsError) {
       console.error('Failed to emit WebSocket event:', wsError);
-      // Don't fail the request if WebSocket fails
     }
 
     res.json({ success: true, invoice });
@@ -147,7 +145,7 @@ router.post("/pay/:id", async (req, res) => {
     }
 
     const txDigest = await payOnChainInvoice({
-      invoiceId: invoice.objectId, // use objectId
+      invoiceId: invoice.objectId,
       payer: cleanPayer,
       amount: invoice.amount,
       surchargeBps: invoice.surchargeBps,
@@ -196,7 +194,7 @@ router.post("/create", async (req, res) => {
       service,
       description,
       txDigest,
-      objectId, // store the Invoice objectId
+      objectId,
       status: "unpaid",
     });
 
@@ -220,13 +218,12 @@ router.post("/create", async (req, res) => {
         totalAmount,
         dueDate: new Date(dueDate * 1000).toLocaleDateString(),
         paymentUrl,
-        payeeName: "Paymint User" // You might want to get this from user profile
+        payeeName: "Paymint User"
       });
       
       console.log(`Invoice email sent successfully to ${payer} with payment URL: ${paymentUrl}`);
     } catch (emailError) {
       console.error("Failed to send invoice email:", emailError);
-      // Don't fail the whole request if email fails
     }
 
     // Emit WebSocket event for real-time updates
@@ -239,7 +236,6 @@ router.post("/create", async (req, res) => {
       }
     } catch (wsError) {
       console.error('Failed to emit WebSocket event:', wsError);
-      // Don't fail the request if WebSocket fails
     }
 
     res.json({ success: true, invoice });
@@ -280,7 +276,7 @@ router.post("/pay/:id", async (req, res) => {
     }
 
     const txDigest = await payOnChainInvoice({
-      invoiceId: invoice.objectId, // use objectId
+      invoiceId: invoice.objectId, 
       payer: cleanPayer,
       amount: invoice.amount,
       surchargeBps: invoice.surchargeBps,

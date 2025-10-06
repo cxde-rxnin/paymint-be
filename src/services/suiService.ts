@@ -46,18 +46,17 @@ export const createOnChainInvoice = async (data: any) => {
     createdAt: createdAt
   });
 
-  // Match the actual Move contract signature: create_invoice(payee_addr, amount, surcharge_bps, metadata_hash, due_date_unix, created_at_unix, ctx)
   console.log("Calling with 6 arguments to match Move contract signature...");
   
   const moveCallResult = tx.moveCall({
     target: `${PACKAGE_ID}::invoice::create_invoice`,
     arguments: [
-      tx.pure(payeeId, "address"),               // 1. payee_addr
-      tx.pure(amount, "u64"),                     // 2. amount
-      tx.pure(surchargeBps, "u64"),              // 3. surcharge_bps  
-      tx.pure(metadataBytes, "vector<u8>"),      // 4. metadata_hash
-      tx.pure(dueDate, "u64"),                   // 5. due_date_unix
-      tx.pure(createdAt, "u64"),                 // 6. created_at_unix
+      tx.pure(payeeId, "address"),      
+      tx.pure(amount, "u64"),        
+      tx.pure(surchargeBps, "u64"),          
+      tx.pure(metadataBytes, "vector<u8>"),
+      tx.pure(dueDate, "u64"),             
+      tx.pure(createdAt, "u64"),             
       // ctx is automatically provided by the system
     ],
   });
@@ -188,13 +187,13 @@ export const createOnChainPayroll = async (data: any) => {
   const moveCallResult = tx.moveCall({
     target: `${PACKAGE_ID}::invoice::create_payroll`,
     arguments: [
-      tx.pure(clientEmailBytes, "vector<u8>"),        // 1. client_email
-      tx.pure(recipientAddresses, "vector<address>"), // 2. recipients
-      tx.pure(recipientAmounts, "vector<u64>"),       // 3. amounts
-      tx.pure(surchargeBps, "u64"),                   // 4. surcharge_bps  
-      tx.pure(metadataBytes, "vector<u8>"),           // 5. metadata_hash
-      tx.pure(dueDate, "u64"),                        // 6. due_date_unix
-      tx.pure(createdAt, "u64"),                      // 7. created_at_unix
+      tx.pure(clientEmailBytes, "vector<u8>"),     
+      tx.pure(recipientAddresses, "vector<address>"), 
+      tx.pure(recipientAmounts, "vector<u64>"),    
+      tx.pure(surchargeBps, "u64"),                   
+      tx.pure(metadataBytes, "vector<u8>"),         
+      tx.pure(dueDate, "u64"),                      
+      tx.pure(createdAt, "u64"),                     
     ],
   });
 

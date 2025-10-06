@@ -68,8 +68,7 @@ router.post('/:id/mark-paid', async (req, res) => {
 
       console.log('Payment confirmation email sent to:', invoice.payer);
     } catch (emailError) {
-      console.error('Failed to send payment confirmation email:', emailError);
-      // Don't fail the request if email fails
+      console.error('Failed to send payment confirmation email:', emailError); 
     }
 
     res.json({ success: true, invoice });
@@ -144,18 +143,16 @@ router.post("/create", async (req, res) => {
         totalAmount,
         dueDate: new Date(dueDate * 1000).toLocaleDateString(),
         paymentUrl,
-        payeeName: "Paymint User" // You might want to get this from user profile
+        payeeName: "Paymint User"
       });
       
       console.log(`Invoice email sent successfully to ${payer} with payment URL: ${paymentUrl}`);
     } catch (emailError) {
       console.error("Failed to send invoice email:", emailError);
-      // Don't fail the whole request if email fails
     }
 
     res.json({ success: true, invoice });
     
-    // Emit real-time update to the payee's room
     if (global.io && invoice.payeeId) {
       global.io.to(`wallet:${invoice.payeeId}`).emit('invoice-created', {
         invoice: invoice,

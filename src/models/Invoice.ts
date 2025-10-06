@@ -1,7 +1,7 @@
 import { Schema, model, Document } from "mongoose";
 
 export interface IInvoice extends Document {
-  issuer?: string; // Freelancer's wallet (deprecated - use payeeId)
+  issuer?: string;
   payeeId: string; // Freelancer/Service provider's wallet (who receives payment)
   payer: string;   // Client's email
   clientId?: string; // Client's wallet, filled at payment
